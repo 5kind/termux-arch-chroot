@@ -1,0 +1,6 @@
+id=arch-chroot
+name=Systemless Arch-Chroot
+version=1.0
+versionCode=1
+author=5kind
+description=Systemless arch-chroot module
