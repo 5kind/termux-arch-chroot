@@ -1,0 +1,1 @@
+../service/termux-arch-chroot@.sh

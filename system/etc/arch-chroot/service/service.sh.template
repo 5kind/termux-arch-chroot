@@ -1,0 +1,64 @@
+MODDIR=${0%/*}
+BASH="/data/data/com.termux/files/usr/bin/bash"
+CHROOT="/system/bin/termux-arch-chroot -f -t"
+INIT="/usr/local/bin/systemctl3.py init"
+LOGDIR="/cache/arch-chroot"
+
+ensure_link_dir() {
+  local dirname=$(readlink -f $1)
+  while [ ! -d $dirname ] ; do
+    echo -e "\033[37m[\033[0m\033[0;33mDEPEND\033[0m\033[37m]\033[0m $dirname not dir, Waiting..."
+    sleep 5
+  done
+}
+
+ensure_dir_mounted() {
+  while ! mountpoint -q "$1" ; do
+    echo -e "\033[37m[\033[0m\033[0;33mDEPEND\033[0m\033[37m]\033[0m $1 not mounted, Waiting..."
+    sleep 5
+  done
+}
+
+LOG_INIT(){
+  $LOGFILE="$LOGDIR/$(basename $ROOTFSDIR).log"
+  echo -e "-- $(date +"%m %d %H:%M:%S") $(hostname) $INIT [$$] --
+\033[37m[\033[0m\033[0;32mNOTICE\033[0m\033[37m]\033[0m "$BASH" "$CHROOT" "$ROOTFSDIR" "$INIT" " > $LOGDIR/log
+  echo $rootfs $(readlink -f "$rootfs")>>$LOGDIR/log
+}
+
+CHROOT_INIT(){
+  LOG_INIT
+  ensure_link_dir $ROOTFSDIR
+  ROOTFSDIR=$(readlink -f $ROOTFSDIR)
+  #ensure_dir_mounted $ROOTFSDIR
+  $BASH $CHROOT $ROOTFSDIR $INIT|tee $LOGFILE
+}
+
+usage() {
+  cat <<EOF
+usage: ${0##*/} chroot-dir [command] [arguments...]
+
+    -h                  Print this help message
+    -b \$BASH           Specify \$BASH to run \$CHROOT script
+    -c \$CHROOT         Specify \$CHROOT to chroot rootfs
+    -i \$INIT           Specify \$INIT as chroot init process
+    -l \$LOGDIR         Specify \$LOGDIR as directory
+    -d                  Make sure \$chrootdir is directory
+    -m                  Make sure \$chrootdir is mounted
+    -n                  Do not to run scrpit in service.d
+
+If 'command' is unspecified, ${0##*/} will launch /bin/bash.
+
+Note that when using arch-chroot, the target chroot directory *should* be a
+mountpoint. This ensures that tools such as pacman(8) or findmnt(8) have an
+accurate hierarchy of the mounted filesystems within the chroot.
+
+If your chroot target is not a mountpoint, you can bind mount the directory on
+itself to make it a mountpoint, i.e. 'mount --bind /your/chroot /your/chroot'.
+
+EOF
+}
+
+for ROOTFSDIR in $MODDIR/rootfs/*; do
+    CHROOT_INIT &
+done

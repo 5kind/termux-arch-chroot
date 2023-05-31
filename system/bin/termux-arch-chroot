@@ -105,27 +105,27 @@ is_mounted() {
   fi
 }
 
-monitor_status() {
-  local monitor_name="$1"
-  local monitor_status=""
+check_func_status() {
+  local func_name="$1"
+  local status_message=""
   shift
-  "$monitor_name" $@ >/dev/null
-  local current_status=$?
-  if [ "$current_status" -eq 0 ]; then
-      monitor_status="\033[37m[\033[0m\033[0;32m  OK  \033[0m\033[37m]"
-      monitor_name="$(echo ${monitor_name:0:1} | tr '[:lower:]' '[:upper:]')${monitor_name:1}\033[0m"
-      echo -e "$monitor_status $monitor_name $@"
+  "$func_name" $@ >/dev/null
+  local exit_status=$?
+  if [ "$exit_status" -eq 0 ]; then
+      status_message="\033[37m[\033[0m\033[0;32m  OK  \033[0m\033[37m]"
+      func_name="$(echo ${func_name:0:1} | tr '[:lower:]' '[:upper:]')${func_name:1}\033[0m"
+      echo -e "$status_message $func_name $@"
   else
-      monitor_status="\033[37m[\033[0m\033[0;31mFAILED\033[0m\033[37m]"
-      monitor_name="Failed\033[0m $monitor_name"
-      echo -e "$monitor_status $monitor_name $@" 1>&2
-      return $current_status
+      status_message="\033[37m[\033[0m\033[0;31mFAILED\033[0m\033[37m]"
+      func_name="Failed\033[0m $func_name"
+      echo -e "$status_message $func_name $@" 1>&2
+      return $exit_status
   fi
 }
 
 chroot_add_mount() {
   if is_mounted $2;then return 0;fi
-  monitor_status mount "$@" && CHROOT_ACTIVE_MOUNTS=("$2" "${CHROOT_ACTIVE_MOUNTS[@]}")
+  check_func_status mount "$@" && CHROOT_ACTIVE_MOUNTS=("$2" "${CHROOT_ACTIVE_MOUNTS[@]}")
 }
 
 chroot_maybe_add_mount() {
@@ -137,7 +137,7 @@ chroot_maybe_add_mount() {
 
 chroot_add_mount_lazy() {
   if is_mounted $2;then return 0;fi
-  monitor_status mount "$@" && CHROOT_ACTIVE_LAZY=("$2" "${CHROOT_ACTIVE_LAZY[@]}")
+  check_func_status mount "$@" && CHROOT_ACTIVE_LAZY=("$2" "${CHROOT_ACTIVE_LAZY[@]}")
 }
 
 try_mkdir() {
@@ -203,10 +203,11 @@ chroot_import_fstab() {
 }
 
 chroot_add_mount_line() {
+  local line_args="$src $dest -t $fstype -o $opts"
   if echo $opts | grep -q "rbind" ;then
-    chroot_add_mount_lazy $src $dest -t $fstype -o $opts
+    chroot_add_mount_lazy ${line_args}
   else
-    chroot_add_mount $src $dest -t $fstype -o $opts
+    chroot_add_mount ${line_args}
   fi
 }
 
@@ -237,8 +238,7 @@ chroot_mount_rootfs() {
 
 try_mkdir_dest() {
   if [[ ! -d $src ]]; then
-    error "Host directory '$src' not found."
-    exit 1
+    warning "Host directory '$src' not found."
   fi
   try_mkdir "${chrootdir}/${dest}"
 }
@@ -257,7 +257,6 @@ is_special_path() {
 }
 
 chroot_add_mount_early() {
-  echo $src $dest $fstype $opts $dump $pass
   if is_special_path $dest ; then
     later_lines+=("$src $dest $fstype $opts $dump $pass")
   else
@@ -265,7 +264,6 @@ chroot_add_mount_early() {
     dest="$chrootdir/$dest"
     chroot_add_mount_line
   fi
-  echo ${later_lines[@]}
 }
 
 chroot_add_mount_type() {
@@ -386,19 +384,19 @@ unshare_setup() {
 
 chroot_teardown() {
   if (( ${#CHROOT_ACTIVE_MOUNTS[@]} )); then
-    monitor_status umount "${CHROOT_ACTIVE_MOUNTS[@]}"
+    check_func_status umount "${CHROOT_ACTIVE_MOUNTS[@]}"
   fi
   unset CHROOT_ACTIVE_MOUNTS
 }
 
 unshare_teardown() {
   if (( ${#CHROOT_ACTIVE_FILES[@]} )); then
-    monitor_status rm "${CHROOT_ACTIVE_FILES[@]}"
+    check_func_status rm "${CHROOT_ACTIVE_FILES[@]}"
   fi
   unset CHROOT_ACTIVE_FILES
 
   if (( ${#CHROOT_ACTIVE_LAZY[@]} )); then
-    monitor_status umount --lazy "${CHROOT_ACTIVE_LAZY[@]}"
+    check_func_status umount --lazy "${CHROOT_ACTIVE_LAZY[@]}"
   fi
   unset CHROOT_ACTIVE_LAZY
 
@@ -593,6 +591,9 @@ usage: ${0##*/} chroot-dir [command] [arguments...]
     -u <user>[:group]   Specify non-root user and optional group to use
     -f *fstab_file*     Use specified fstab file to mount filesystems in chroot.
                  Look up in the following order: \$chrootdir/\$fstab_file \$fstab_file
+    -p *path*           Use specified \$PATH in chroot container.
+                 /usr/local/sbin:/usr/local/bin:/bin:/usr/bin:/sbin:/usr/sbin:/usr/games:/usr/local/games
+                 will available by default.
     -b *path*           Bind mount host directory into the container with bind.
     -v *path*           Mount host directory as a data volume with rbind.
     -r                  Remount \$chrootdir with dev, suid, relatime, exec flags.
@@ -657,14 +658,36 @@ chroot_add_resolv_conf() {
   chroot_add_mount "$src" "$dest" --bind
 }
 
+source_path() {
+  OLD_PATH=$PATH &&
+  [[ $termux_flag = true ]] && export PATH=/data/data/com.termux/files/usr/bin:$PATH
+
+  if [ -n "$container_path" ]; then
+    local container_user=$(echo "$userspec" | cut -d: -f1)
+    if [ -z "$container_user" ] || [ "$container_user" = "root" ]; then
+      container_path=/usr/local/sbin:/sbin:/usr/sbin:$container_path
+    fi
+  fi
+
+  [ -n "$container_path" ]  && export PATH=$container_path:$PATH
+}
+
 fstab_file=""
+container_path=""
 remount_flag=""
 termux_flag=""
-while getopts ':v:b:f:rthNu:' flag; do
+while getopts ':hNu:v:b:f::p::rt' flag; do
   case $flag in
     f)
       fstab_file="$OPTARG"
-      [ -z "$file" ] && fstab_file="/usr/local/etc/fstab"
+      [ -z "$fstab_file" ] && fstab_file="/usr/local/etc/fstab"
+      ;;
+    p)
+      if [ -z "$OPTARG" ]; then
+        container_path="/usr/local/bin:/bin:/usr/bin:/usr/games:/usr/local/games"
+      else
+        container_path="$OPTARG:/usr/local/bin:/bin:/usr/bin:/usr/games:/usr/local/games"
+      fi
       ;;
     r)
       remount_flag=true
@@ -709,7 +732,7 @@ arch-chroot() {
 
   [[ -d $chrootdir ]] || die "Can't create chroot on non-directory %s" "$chrootdir"
 
-  [[ $termux_flag = true ]] && OLD_PATH=$PATH && export PATH=/data/data/com.termux/files/usr/bin:$PATH
+  source_path
 
   $setup "$chrootdir" || die "failed to setup chroot %s" "$chrootdir"
   chroot_add_resolv_conf "$chrootdir" || die "failed to setup resolv.conf"
@@ -721,7 +744,6 @@ arch-chroot() {
   chroot_args=()
   [[ $userspec ]] && chroot_args+=(--userspec "$userspec")
 
-  [[ $termux_flag = true ]] && export PATH=$OLD_PATH
   SHELL=/bin/bash $pid_unshare chroot "${chroot_args[@]}" -- "$chrootdir" "${args[@]}"
   if [ $? -ne 0 ]; then
     warning "unshare may failed! try chroot $chrootdir without unshare!"

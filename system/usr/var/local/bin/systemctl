@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+script="${0}"
+script_cmd="${script}3.py"
+script_base=$(basename "$script")
+systemctl=$(readlink -f "$script")
+
+control(){
+  [ -z "$command" ] && command=$script_cmd
+  [ ! -x /usr/bin/python3 ] && command="termux-chroot $command"
+  $command ${@}
+}
+
+systemctl(){
+  if [ "$EUID" -eq 0 ] || [ -n "${TERMUX_VERSION}" ] ; then
+    command="$script_cmd"
+  elif sudo_path=$(which sudo); then
+    command="$sudo_path $script_cmd"
+  else
+    echo -e "\033[0;31mCall to systemctl ${@} may fail: Interactive authentication required.\033[0m"
+    command="$script_cmd"
+  fi
+  control ${@}
+}
+
+journalctl(){
+  control ${@}
+}
+
+monitor_status() {
+  local monitor_name="$1"
+  local monitor_status=""
+  shift
+  "$monitor_name" $@ >/dev/null
+  if [ "$?" -eq 0 ]; then
+      monitor_status="\033[37m[\033[0m\033[0;32m  OK  \033[0m\033[37m]"
+      monitor_name="$(echo ${monitor_name:0:1} | tr '[:lower:]' '[:upper:]')${monitor_name:1}\033[0m"
+      echo -e "$monitor_status $monitor_name $@"
+  else
+      monitor_status="\033[37m[\033[0m\033[0;31mFAILED\033[0m\033[37m]"
+      monitor_name="Failed\033[0m $monitor_name"
+      echo -e "$monitor_status $monitor_name $@" 1>&2
+  fi
+}
+
+init(){
+  if ! $systemctl status systemd-init > /dev/null 2>&1 ; then
+    monitor_status $systemctl start systemd-init
+  fi
+}
+
+halt(){
+  $systemctl stop systemd-init&
+  $systemctl halt&
+  local halt_pid=$!
+  sleep 10 &
+  local sleep_pid=$!
+  wait -n $halt_pid $sleep_pid
+  kill $halt_pid $sleep_pid
+}
+
+case $script_base in
+  journalctl)
+    journalctl ${@}
+    ;;
+  init|*.sh)
+    init
+    ;;
+  halt)
+    halt
+    ;;
+  reboot)
+    halt&&init
+    ;;
+  *)
+    systemctl ${@}
+    ;;
+esac
+
+unset script script_cmd script_base systemctl
+unset -f control systemctl journalctl monitor_status init halt

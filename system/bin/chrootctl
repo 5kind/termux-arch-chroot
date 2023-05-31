@@ -1,0 +1,45 @@
+#!/data/data/com.termux/files/usr/bin/bash
+ignore_error() {
+    "$@" 2>/dev/null
+    return 0
+}
+
+source_conf(){
+    source /etc/arch-chroot/default.conf
+    mkdir -p "$LOGDIR"
+}
+
+ignore_error source_conf
+
+chroot_list() {
+    ignore_error ls ${POOL[@]} 
+}
+
+chroot_status() {
+    for pooldir in ${POOL[@]}; do
+        mountpoint "$pooldir/$1/run" > /dev/null 2>&1
+        mount_status=$?
+        if [ $mount_status -eq 0 ]; then
+            echo ""
+    done
+}
+
+usage() {
+    cat <<EOF
+Usage: ${0##*/} [options] command [name...]
+Options:
+EOF
+}
+
+declare -A commands=(
+    ["list"]="chroot_list"
+    ["ls"]="chroot_list"
+    ["status"]="chroot_status"
+)
+
+if [ -z $1 ];then
+    usage
+    exit 1
+fi
+
+${commands[${1}]} "${@:2}"

@@ -1,0 +1,23 @@
+# Static information about the filesystems.
+# See fstab(5) for details.
+
+# <file system> <dir> <type> <options> <dump> <pass>
+# LocalHost
+/dev/block/mmcblk0	/media/rootfs	f2fs	defaults	0	0
+/data/local/tmp/sdcard/systemd-journald.service.log	/var/log/journal/systemd-journald.service.log	none	bind	0	0
+# RedMi
+termux@192.168.1.2:/data/data/com.termux/files/home	/media/sshfs/redmi	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=8022	0	0
+termux@192.168.1.2:/storage/emulated/0			/media/sshfs/sdcard	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=8022	0	0
+#termux@192.168.89.166:/data/data/com.termux/files/home	/media/sshfs/redmi	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=8022	0	0
+#termux@192.168.89.166:/storage/emulated/0		/media/sshfs/sdcard	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=8022	0	0
+termux@192.168.31.100:/data/data/com.termux/files/home	/media/sshfs/redmi	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=8022	0	0
+termux@192.168.31.100:/storage/emulated/0		/media/sshfs/sdcard	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=8022	0	0
+# iPhone
+mobile@192.168.1.123:/var/mobile			/media/sshfs/mobile	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=22	0	0
+#mobile@192.168.89.2:/var/mobile				/media/sshfs/mobile	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=22	0	0
+mobile@192.168.31.131:/var/mobile			/media/sshfs/mobile	sshfs	allow_other,IdentityFile=/home/termux/.ssh/id_termux,Port=22	0	0
+# alist
+http://127.0.0.1:5244/dav	/media/alist/0	davfs	uid=system,gid=aid_everybody	0	0
+http://192.168.1.2:5244/dav	/media/alist/1	davfs	uid=aid_everybody,gid=aid_everybody	0	0
+#http://192.168.89.166:5244/dav	/media/alist/1	davfs	uid=aid_everybody,gid=aid_everybody	0	0
+http://192.168.31.100:5244/dav	/media/alist/1	davfs	uid=aid_everybody,gid=aid_everybody	0	0
