@@ -38,4 +38,4 @@ main(){
   run_scripts_in later
 }
 
-main >> $LOGFILE 2>&1
+main > $LOGFILE 2>&1
