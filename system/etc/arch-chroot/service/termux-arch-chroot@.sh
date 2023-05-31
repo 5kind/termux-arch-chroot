@@ -31,8 +31,8 @@ LOGFILE="$LOGDIR/$CHROOTDIR".log
 
 main() {
   for pooldir in ${POOL[@]}; do
-    log_msg_run $CHROOT -f /usr/local/etc/fstab -p /path/to/bin -r -t "$pooldir/$CHROOTDIR" "$INIT":
+    log_msg_run $CHROOT -f /usr/local/etc/fstab -p /path/to/bin -r -t "$pooldir/$CHROOTDIR" "$INIT"
   done
 }
 
-main >> $LOGFILE 2>&1
+main > $LOGFILE 2>&1
