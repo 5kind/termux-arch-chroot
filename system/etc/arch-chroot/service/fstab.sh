@@ -17,4 +17,4 @@ main() {
   mount -a -v
   log_msg Mounted all filesystems mentioned in fstab
 }
-main >> $LOGFILE 2>&1
+main > $LOGFILE 2>&1
