@@ -1,0 +1,55 @@
+arch-chroot(8)
+==============
+
+Name
+----
+arch-chroot - enhanced chroot command
+
+Synopsis
+--------
+arch-chroot [options] chroot-dir [command] [arguments...]
+
+Description
+-----------
+arch-chroot wraps the linkman:chroot[1] command while ensuring that important
+functionality is available, e.g. mounting '/dev/', '/proc' and other API
+filesystems, or exposing linkman:resolv.conf[5] to the chroot.
+
+If 'command' is unspecified, arch-chroot will launch */bin/bash*.
+
+[NOTE]
+======
+The target chroot-dir *should* be a mountpoint. This ensures that tools such as
+linkman:pacman[8] or linkman:findmnt[8] have an accurate hierarchy of the
+mounted filesystems within the chroot. If your chroot target is not a
+mountpoint, you can bind mount the directory on itself to make it a mountpoint,
+i.e.:
+
+'mount --bind /your/chroot /your/chroot'
+======
+
+
+Options
+-------
+
+*-N*::
+	Run in unshare mode. This will use linkman:unshare[1] to create a new
+	mount and user namespace, allowing regular users to create new system
+	installations.
+
+*-u <user>[:group]*::
+	Specify non-root user and optional group to use.
+
+*-r*::
+	Do not change the resolv.conf within the chroot. This means that the resolver
+	might not work in the chroot, which could be the required state.
+
+*-h*::
+	Output syntax and command line options.
+
+See Also
+--------
+
+linkman:pacman[8]
+
+include::footer.asciidoc[]
