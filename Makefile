@@ -4,18 +4,19 @@ PREFIX = /usr/local
 
 BINPROGS = \
 	termux-arch-chroot \
-	unchroot
+	fstab.sh \
+	profile
 
-MANS = \
-	doc/termux-arch-chroot.8 \
-	doc/unchroot.8
+# MANS = \
+# 	doc/termux-arch-chroot.8 \
+# 	doc/unchroot.8
 
 BASH = bash
 ZSHCOMP := $(wildcard completion/zsh/*)
 BASHCOMP := $(wildcard completion/bash/*)
 
 all: $(BINPROGS) man
-man: $(MANS)
+# man: $(MANS)
 
 V_GEN = $(_v_GEN_$(V))
 _v_GEN_ = $(_v_GEN_0)
@@ -23,12 +24,14 @@ _v_GEN_0 = @echo "  GEN     " $@;
 
 edit = $(V_GEN) m4 -P $@.in >$@ && chmod go-w,+x $@
 
-termux-arch-chroot: termux-arch-chroot.in common
+termux-arch-chroot: termux-arch-chroot.in common fstab-helpers
 	$(edit)
 
-unchroot: unchroot.in common
+fstab.sh: fstab.sh.in fstab-helpers
 	$(edit)
 
+profile: profile.in common
+	$(edit)
 
 doc/%: doc/%.asciidoc doc/asciidoc.conf doc/footer.asciidoc
 	$(V_GEN) a2x --no-xmllint --asciidoc-opts="-f doc/asciidoc.conf" -d manpage -f manpage -D doc $<

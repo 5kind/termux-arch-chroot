@@ -1,0 +1,109 @@
+#!/bin/bash
+
+m4_include(common)
+status() { out "Status:" "$@"; }
+running() { eval "status running; return 0"; }
+stopped() { eval "status stopped; return 1"; }
+
+source_profile(){
+    PROFILE=/etc/chroot-service/profile
+    [ -f $PROFILE ] && source $PROFILE
+}
+# init
+chroot_init(){
+    source_profile
+    out "$CHROOT $args $INIT"
+    exec $CHROOT $args $INIT
+}
+# Add $1 to $accepted_args if $1 not in.
+process_arg() {
+    local arg="$1"
+    case " ${accepted_args[*]} " in
+        *" $arg "*)
+            ;;
+        *)
+            out "$arg"
+            accepted_args+=("$arg")
+            ;;
+    esac
+}
+# Get all active chroot from /proc/*/root.
+chroot_list() {
+    local accepted_args=()
+    for symlink in /proc/*/root; do
+        [[ -L $symlink ]] && process_arg $(realpath "$symlink")
+    done
+}
+# check status
+chroot_status(){
+    local chrootdir=$1
+    case $chrootdir in
+        /)  status running; return 0    ;;
+        '') status stopped; return 1    ;;
+    esac
+    for active_chroot in $(chroot_list) ;do
+        case $active_chroot in
+            *"/$chrootdir"|"$chrootdir")
+                status running
+                return 0    ;;
+        esac
+    done
+    status stopped
+    return 1
+}
+# exec command
+chroot_exec() {
+    if chroot_status $chrootdir;then
+        exec chroot $chrootdir $args
+    else
+        exec $CHROOT $chrootdir $args
+    fi
+}
+# Kill all pid in container $1 with signal $2.
+kill_chroot(){
+    for chrootdir in /proc/*/root ;do
+        pid=$(basename $(dirname $chrootdir))
+        if [[ $(readlink -f $chrootdir) = $1 ]] && \
+        [[ $pid =~ ^[0-9]+$ ]];then
+            kill $2 $pid
+        fi
+    done
+}
+# stop chrootdir
+chroot_halt(){
+    [[ ! -d "$chrootdir" || "$chrootdir" == "/" ]] && return 1
+    [ -z "$HALT" ] && source_profile
+    [ -n "$HALT" ] && chroot "$chrootdir" $HALT
+    kill_chroot "$chrootdir" $args
+    kill_chroot "$chrootdir" -9
+    mountpoint -q "$chrootdir" && umount -lr "$chrootdir"
+}
+
+usage(){
+    cat <<EOF
+Usage: ${0##*/} [init|start|login|shell|exec|list|status|halt|stop|kill|poweroff]
+EOF
+}
+
+applet=$1
+shift
+chrootdir=$(readlink -f "$1")
+shift
+args=${@}
+
+case $applet in
+    init|start)
+        chroot_init     ;;
+    login|shell|exec)
+        chroot_exec     ;;
+    list)
+        chroot_list     ;;
+    status)
+        chroot_status   ;;
+    halt|stop|kill|poweroff)
+	chroot_halt     ;;
+    -h|help|--help)
+        usage && exit 0 ;;
+    *)
+        usage && exit 1 ;;
+esac
