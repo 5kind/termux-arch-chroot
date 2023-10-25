@@ -7,6 +7,7 @@ mount_fs() {
     try_create_dest
   done < <(grep -vE '^\s*(#|$)' /etc/fstab)
   mount -a -v
+  return 0
 }
 
 mount_fs
