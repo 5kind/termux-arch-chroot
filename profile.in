@@ -24,6 +24,7 @@ SLEEP_TIME=5                # set wait time for bash or mount
 # - set chroot environment
 ENVIRONMENT="/bin/env PATH=/usr/local/sbin:/usr/local/bin\
 :/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:$PATH"
+[ -z "$INIT" ] &&
 INIT="$ENVIRONMENT /usr/local/bin/init"				# init
 HALT="$ENVIRONMENT /usr/local/bin/halt"				# halt
 LOGFILE=/cache/${CHROOTDIR##*/}.log                 # logfile
@@ -31,10 +32,10 @@ LOGFILE=/cache/${CHROOTDIR##*/}.log                 # logfile
 m4_include(common)
 # make sure chrootdir mounted
 ensure_mounted() {
-    [ ! $MOUNTED ] && return
+    $MOUNTED || return
     local folder="$1"
 
-    while [ ! mountpoint -q "$folder" 2>/dev/null ] ;do
+    while ! mountpoint -q "$folder" 2>/dev/null ;do
         warning "$folder is not mountpoint. Waiting ..."
         sleep $SLEEP_TIME
     done
@@ -45,7 +46,7 @@ ensure_executable() {
     shift
     local args=${@}
 
-    while [ ! $exe $args 2>/dev/null ] ;do
+    while ! $exe $args 2>/dev/null ;do
         warning "$exe is not executable. Waiting ..."
         sleep $SLEEP_TIME
     done
@@ -67,11 +68,11 @@ chroot_args_add(){
     CHROOT_ARGS="$CHROOT_ARGS ${@}"
 }
 
-[ ! -z $LOG_LEVEL ] && chroot_args_add "-l $LOG_LEVEL"
-[ ! -z $UNSHARE_LEVEL ] && chroot_args_add "-n $UNSHARE_LEVEL"
-[ ! -z $CHROOT_USER ] && chroot_args_add "-u $CHROOT_USER"
-[ ! $KEEPRESOLVCONF ] && chroot_args_add "-r"
+[ -z $LOG_LEVEL ] || chroot_args_add "-l $LOG_LEVEL"
+[ -z $UNSHARE_LEVEL ] || chroot_args_add "-n $UNSHARE_LEVEL"
+[ -z $CHROOT_USER ] || chroot_args_add "-u $CHROOT_USER"
+$KEEPRESOLVCONF || chroot_args_add "-r"
 $UNSHARE && chroot_args_add "-N"
-[ ! $MOUNTED ] && chroot_args_add "-m"
+$MOUNTED || chroot_args_add "-m"
 
 CHROOT_INIT="$BASH $CHROOT $CHROOT_ARGS $CHROOTDIR $INIT"

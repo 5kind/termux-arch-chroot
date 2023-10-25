@@ -16,7 +16,7 @@ ZSHCOMP := $(wildcard completion/zsh/*)
 BASHCOMP := $(wildcard completion/bash/*)
 
 all: $(BINPROGS) man
-# man: $(MANS)
+man: $(MANS)
 
 V_GEN = $(_v_GEN_$(V))
 _v_GEN_ = $(_v_GEN_0)
