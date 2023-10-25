@@ -1,6 +1,6 @@
 m4_include(fstab-helpers)
 
-main() {
+mount_fs() {
   while read line; do
     src=$(echo "$line" | awk '{print $1}')
     dest=$(echo "$line" | awk '{print $2}')
@@ -9,4 +9,4 @@ main() {
   mount -a -v
 }
 
-main
+mount_fs
