@@ -50,7 +50,7 @@ exec_msg(){
 
 skip_mounted() {
   if mountpoint -q "$1"; then
-    warning "$1 is alreadly mounted! SKIP mount!"
+    warning "$1 is alreadly mounted, skip mount!"
   else
     return 1
   fi
@@ -248,15 +248,11 @@ chroot_mount_later() {
 
 chroot_later_rootfs() {
   log_msg -- later-rootfs $1 --
-  chroot_maybe_add_link "/proc/self/fd" "$1/dev/fd" &&
-  chroot_maybe_add_link "/proc/self/fd/0" "$1/dev/stdin" &&
-  chroot_maybe_add_link "/proc/self/fd/1" "$1/dev/stdout" &&
-  chroot_maybe_add_link "/proc/self/fd/2" "$1/dev/stderr" &&
+  chroot_mount_later "$1"
   (( $(stat -c "%a" "$1/dev/shm") == 1777 )) 2>/dev/null &&
   [[ ! -e "$1/run/shm" ]] && ln -s "/dev/shm" "$1/run/shm"
   try_mkdir "$1/run/lock" &&
   chmod 1777 "$1/run/lock"
-  chroot_mount_later "$1"
 }
 
 chroot_active_trap() {
