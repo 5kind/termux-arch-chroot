@@ -1,78 +1,9 @@
-# chroot-service configure	-*- shell-profile -*-
-# SPDX-License-Identifier: GPL-2-or-later
-#
-# This file is part of chroot-service modules.
-#
-# Copyright (C) 2023 5kind
-### Chroot Config
-PREFIX=/data/data/com.termux/files/usr
-#BASH="$PREFIX/bin/bash"	# set bash  - use shebang(/bin/bash) by default.
-CHROOT=termux-arch-chroot	# set chroot
-ACTIVE_PATH="$PREFIX/bin"	# set script $PATH
-# - set chroot args         # set /boot
-MOUNT_ARGS="-f /etc/$MODNAME/fstab -b /data/adb/modules/chroot-service:/boot"
-#CHROOT_USER=root           # set user
-KEEPRESOLVCONF=false        # /etc/resolv.conf  - unmodified
-UNSHARE=true                # unshare
-# - unshare usually not available in android kernel, only devices isolated.
-MOUNTED=true                # set correct chrootdir mount status
-# - if chrootdir MOUNTED, we wait for it, else we bind & remount to itself.
-LOG_LEVEL=0                 # set log level
-UNSHARE_LEVEL=2             # set unshare level
-SLEEP_TIME=5                # set wait time for bash or mount
-#CHROOTDIR=/data/local/mnt	# set chrootdir
-# - set chroot environment
-ENVIRONMENT="/bin/env PATH=/usr/local/sbin:/usr/local/bin\
-:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:$PATH"
-[ -z "$INIT" ] &&
-INIT="$ENVIRONMENT /usr/local/bin/init"				# init
-HALT="$ENVIRONMENT /usr/local/bin/halt"				# halt
-LOGFILE=/cache/${CHROOTDIR##*/}.log                 # logfile
 ### Function API
 m4_include(common)
-# make sure chrootdir mounted
-ensure_mounted() {
-    $MOUNTED || return
-    local folder="$1"
 
-    while ! mountpoint -q "$folder" 2>/dev/null ;do
-        warning "$folder is not mountpoint. Waiting ..."
-        sleep $SLEEP_TIME
-    done
-}
-
-ensure_executable() {
-    local exe=$1
-    shift
-    local args=${@}
-
-    while ! $exe $args 2>/dev/null ;do
-        warning "$exe is not executable. Waiting ..."
-        sleep $SLEEP_TIME
-    done
-}
-
-ensure_bash_executable() {
-    case $CHROOT in
-        *arch-chroot*)          ;;
-        *)      return 0        ;;
-    esac
-    [ -z $BASH ] && BASH=/bin/bash
-    ensure_executable $BASH --version
-}
-
-### Chroot Args
-CHROOT_ARGS="$MOUNT_ARGS -p $ACTIVE_PATH:$PATH"
-
-chroot_args_add(){
-    CHROOT_ARGS="$CHROOT_ARGS ${@}"
-}
-
-[ -z $LOG_LEVEL ] || chroot_args_add "-l $LOG_LEVEL"
-[ -z $UNSHARE_LEVEL ] || chroot_args_add "-n $UNSHARE_LEVEL"
-[ -z $CHROOT_USER ] || chroot_args_add "-u $CHROOT_USER"
-$KEEPRESOLVCONF || chroot_args_add "-r"
-$UNSHARE && chroot_args_add "-N"
-$MOUNTED || chroot_args_add "-m"
-
-CHROOT_INIT="$BASH $CHROOT $CHROOT_ARGS $CHROOTDIR $INIT"
+if test -d $ETCDIR/profile.d/; then
+        for profile in $ETCDIR/profile.d/*.sh; do
+                test -r "$profile" && . "$profile"
+        done
+        unset profile
+fi
