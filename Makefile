@@ -24,10 +24,10 @@ _v_GEN_0 = @echo "  GEN     " $@;
 
 edit = $(V_GEN) m4 -P $@.in >$@ && chmod go-w,+x $@
 
-termux-arch-chroot: termux-arch-chroot.in common fstab-helpers
+termux-arch-chroot: termux-arch-chroot.in common fstab-helpers.sh.in
 	$(edit)
 
-fstab.sh: fstab.sh.in fstab-helpers
+fstab-helpers.sh: fstab-helpers.sh.in
 	$(edit)
 
 profile: profile.in common
