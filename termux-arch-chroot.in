@@ -69,7 +69,7 @@ chroot_maybe_add_mount() {
   fi
 }
 
-m4_include(fstab-helpers)
+m4_include(fstab-helpers.sh)
 
 try_rm(){
   local file=$1

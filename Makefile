@@ -4,7 +4,6 @@ PREFIX = /usr/local
 
 BINPROGS = \
 	termux-arch-chroot \
-	fstab.sh \
 	profile
 
 # MANS = \
@@ -24,10 +23,7 @@ _v_GEN_0 = @echo "  GEN     " $@;
 
 edit = $(V_GEN) m4 -P $@.in >$@ && chmod go-w,+x $@
 
-termux-arch-chroot: termux-arch-chroot.in common fstab-helpers.sh.in
-	$(edit)
-
-fstab-helpers.sh: fstab-helpers.sh.in
+termux-arch-chroot: termux-arch-chroot.in common fstab-helpers.sh
 	$(edit)
 
 profile: profile.in common
