@@ -1,6 +1,5 @@
 *~
 termux-arch-chroot
-fstab-helpers.sh
 chrootctl*
 profile
 doc/*.8
